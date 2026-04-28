@@ -1,0 +1,35 @@
+---
+title: "Analysis Report"
+author: "Svenja Kuster"
+date: today
+toc: true
+abstract-title: "Research questions:"
+abstract: "Does the new drug AH-27 lead to a greater reduction of systolic blood pressure (SBP) compared to standard care? Is a higher baseline SBP associated with a greater reduction in SBP? Do older patients have a reduced responsiveness to AH-27? Is there a sex difference in the response to AH-27?"
+format:
+  html:
+    embed-resources: true
+    number-sections: true
+    code-fold: show
+editor: visual
+editor_options:
+  chunk_output_type: console
+execute:
+  warning: false
+  message: false
+---
+
+# Prepare Session and Import Data
+
+# Explore the Data
+
+## numerically
+
+## graphically
+
+# Fit Candidate Models and Select the Best One
+
+# Validate Preferred Model
+
+# Interpret and Report Findings
+
+# Store Session Information
