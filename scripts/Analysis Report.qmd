@@ -18,7 +18,28 @@ execute:
   message: false
 ---
 
-# Prepare Session and Import Data
+# Prepare Session and Import/Clean Data
+
+```{r}
+#| label: load-packages
+#| echo: false
+#| output: false
+
+library(pastecs)
+library(ggpubr); theme_set(theme_bw())
+library(GGally)
+library(performance)
+library(MuMIn)
+library(ggeffects)
+library(knitr)
+```
+
+```{r}
+#| label: import-and-clean-data
+#| echo: false
+#| output: false
+sbp <- read.csv("./data/processed/hyper-tension.csv")
+```
 
 # Explore the Data
 
