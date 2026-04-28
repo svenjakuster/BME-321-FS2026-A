@@ -85,6 +85,28 @@ ggplot(sbp, aes(treatment_group, reduction_sbp, col=sex))+
 
 # Fit Candidate Models and Select the Best One
 
+```{r}
+#| label: fit-candidate-models
+#| output: false
+
+mod.null <- lm(reduction_sbp~1, data=sbp) #null model for comparison
+mod.additive <- lm(reduction_sbp~age+baseline_sbp+treatment_group+sex, data=sbp) #all variables of interest additive
+mod.int.age <- lm(reduction_sbp~baseline_sbp+treatment_group*age +sex, data=sbp) #interaction between treatment group and age
+mod.int.sex <- lm(reduction_sbp~baseline_sbp+treatment_group*sex +age, data=sbp) #interaction between treatment group and sex
+mod.int.sex.age <- lm(reduction_sbp~baseline_sbp+treatment_group*sex *age, data=sbp) #interaction between treatment group, sex and age
+```
+
+```{r}
+#| label: model-comparison
+#| output: false
+
+mod.comparison <- compare_performance(mod.null, mod.additive, mod.int.age, mod.int.sex, mod.int.sex.age)
+
+mod.final <- mod.int.age
+```
+
+The AICc `r mod.comparison[2,5]` and BIC `r mod.comparison[2,7]` is the best for only the additive model. When looking at the adjusted *R*^2^ , the model that includes an interaction term with age (*R*^2^ = `r mod.comparison[3,10]`), has a marginally higher *R*^2^ compared to the additive model (*R*^2^ = `r mod.comparison[2,10]`). Since the interactive effect of age and treatment is included in our research question, I will be continuing with this model.
+
 # Validate Preferred Model
 
 # Interpret and Report Findings
