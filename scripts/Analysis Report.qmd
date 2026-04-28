@@ -79,7 +79,8 @@ ggpairs(sbp[,-1])
 
 ggplot(sbp, aes(treatment_group, reduction_sbp, col=sex))+
   geom_jitter(width = .2, alpha=.2)+
-  geom_boxplot(alpha=0)
+  geom_boxplot(alpha=0)+
+  labs(x="Treatment Group", y="Reduction in Systolic Blood Pressure [mmHg]", title = "Reduction in Systolic Blood Pressure According to Treatment Group and Sex")
 ```
 
 # Fit Candidate Models and Select the Best One
