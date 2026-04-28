@@ -40,12 +40,13 @@ library(knitr)
 #| output: false
 
 sbp <- read.csv("./data/processed/hyper-tension.csv", stringsAsFactors = T)
+sbp$treatment_group <- factor(sbp$treatment_group, levels=c("standard_care", "AH27")) #change order of factors for easier interpretation later on
 str(sbp)
 ```
 
 # Explore the Data
 
-## numerically
+## Numerically
 
 ```{r}
 #| label: tbl-numerical-exploration
@@ -60,7 +61,7 @@ kable(desc.stats) #data looks good and assumption of normality seems fullfilled,
 
 As shown in @tbl-numerical-exploration, the assumption of normality is fulfilled for the two blood pressure variables but not for "age". This, however, is expected, since the age of patients who get treated for high blood pressure, will be very similar (i.e. very young patients for example will usually not be treated for hypertension).
 
-## graphically
+## Graphically
 
 ```{r}
 #| label: graphical-exploration
@@ -80,7 +81,7 @@ ggpairs(sbp[,-1])
 ggplot(sbp, aes(treatment_group, reduction_sbp, col=sex))+
   geom_jitter(width = .2, alpha=.2)+
   geom_boxplot(alpha=0)+
-  labs(x="Treatment Group", y="Reduction in Systolic Blood Pressure [mmHg]", title = "Reduction in Systolic Blood Pressure According to Treatment Group and Sex")
+  labs(x="Treatment Group", y="Reduction in Systolic Blood Pressure [mmHg]", title = "Reduction in Systolic Blood Pressure\nAccording to Treatment Group and Sex")
 ```
 
 # Fit Candidate Models and Select the Best One
@@ -105,10 +106,82 @@ mod.comparison <- compare_performance(mod.null, mod.additive, mod.int.age, mod.i
 mod.final <- mod.int.age
 ```
 
-The AICc `r mod.comparison[2,5]` and BIC `r mod.comparison[2,7]` is the best for only the additive model. When looking at the adjusted *R*^2^ , the model that includes an interaction term with age (*R*^2^ = `r mod.comparison[3,10]`), has a marginally higher *R*^2^ compared to the additive model (*R*^2^ = `r mod.comparison[2,10]`). Since the interactive effect of age and treatment is included in our research question, I will be continuing with this model.
+The AICc (`r round(mod.comparison[2,5], 2)`) and BIC (`r round(mod.comparison[2,7], 2)`) is the best for only the additive model. When looking at the adjusted *R*^2^ , the model that includes an interaction term with age (*R*^2^ = `r round(mod.comparison[3,10], 3)`), has a marginally higher *R*^2^ compared to the additive model (*R*^2^ = `r round(mod.comparison[2,10], 3)`). Since the interactive effect of age and treatment is included in our research question, I will be continuing with this model.
 
 # Validate Preferred Model
 
+```{r}
+#| label: fig-model-validation
+#| fig-cap: "Graphical evaluation of model performance"
+#| fig-width: !expr 20/2.54
+#| fig-height: !expr 24/2.54
+
+check_model(mod.final)
+```
+
+@fig-model-validation shows that overall, our model performs quite well and fulfills our assumptions. Note that the high VIF is to be expected, since we included an interaction term in our model.
+
 # Interpret and Report Findings
 
+```{r}
+#| label: model-interpretation
+#| echo: false
+
+#coefficients table:
+coef.table<- round(summary(mod.final)$coefficients, 3)
+
+#r squared:
+r2 <- round(summary(mod.final)$r.squared,3)
+
+#comparison to null model:
+null.chi <- anova(mod.null, mod.final)
+
+#plot that shows effect of baseline sbp on reduction:
+pred.baseline <- predict_response(mod.final)$baseline_sbp
+plot.baseline <- ggplot(data=pred.baseline, aes(x, predicted))+
+  geom_line(col="darkgreen")+
+  geom_ribbon(aes(ymin= conf.low, ymax= conf.high), alpha=.3, fill="darkgreen")+
+  geom_point(data=sbp, aes(x=baseline_sbp, y=reduction_sbp), alpha=.2)+
+  labs(x="Baseline Systolic Blood Pressure [mmHg]", y="Reduction in Systolic Blood Pressure [mmHg]", title="a) Effect of Baseline Systolic Blood Pressure\non the Reduction of Systolic Blood Pressure")
+
+#plot that shows the effect of age*treatment group on reduction:
+p <- seq(min(sbp$age), max(sbp$age), length.out= 100)
+pred.age.treatment <- predict_response(mod.final, c("age", "treatment_group"))
+plot.age.treatment <- ggplot(data=pred.age.treatment, aes(x, predicted))+
+  geom_ribbon(aes(ymin= conf.low, ymax= conf.high, fill= group), alpha= .2) +
+    geom_line(aes(col= group))+
+  geom_point(data=sbp, aes(x=age, y=reduction_sbp, col=treatment_group), alpha=.2)+
+  labs(x="Age", y="Reduction in Systolic Blood Pressure [mmHg]", title="b) Effect of Age and Treatment\non the Reduction of Systolic Blood Pressure",col="Treatment", fill="Treatment")
+```
+
+```{r}
+#| label: tbl-model-interpretation
+#| tbl-cap: !expr paste("Estimates, associated standard errors and statistical significance of the parameters estimated by a linear model.", "($R^2$=", r2, ", $\\chi^2_{(", null.chi[2, 3], ",", null.chi[2, 1], ")}$=", round(null.chi[2,5], 3), ", $p$", format.pval(null.chi[2, 6], eps = 0.001), ")")
+#| echo: false
+
+kable(coef.table)
+```
+
+```{r}
+#| label: fig-report
+#| echo: false
+#| fig-width: !expr 24/2.54
+#| fig-height: !expr 12/2.54
+#| fig-cap: "Effect of Baseline Systolic Blood Pressure, Age and Treatment on the Reduction of Systolic Blood Pressure"
+
+ggarrange(plot.baseline, plot.age.treatment)
+```
+
+A linear model (*R*^2^ = `r r2` , `r paste("$\\chi^2_{(", null.chi[2,3], ",", null.chi[2,1], ")}$")`= `r round(null.chi[2, 5], 3)` , *p*`r format.pval(null.chi[2, 6], eps= 0.001)`; @tbl-model-interpretation) performed significantly better than a null model, comprising an intercept only. The model showed a significant effect of only baseline systolic blood pressure ($\beta_{baseline-sbp}$= `r round(coef.table[2, 1], 3)` , *SE*= `r round(coef.table[2, 2], 3)` , *z*= `r round(coef.table[2, 3], 3)`, *p*= `r round(coef.table[2,  4], 3)`; @fig-report *a)*) on the reduction of systolic blood pressure.
+
+The model generated no compelling support for the treatment ($\beta_{treatment-groupAH27}$= `r round(coef.table[3, 1], 3)` , *SE*= `r round(coef.table[3, 2], 3)` , *z*= `r round(coef.table[3, 3], 3)`, *p*= `r round(coef.table[3,  4], 3)`), age ($\beta_{age}$= `r round(coef.table[4, 1], 3)` , *SE*= `r round(coef.table[4, 2], 3)` , *z*= `r round(coef.table[4, 3], 3)`, *p*= `r round(coef.table[4,  4], 3)`) or sex ($\beta_{sexmale}$= `r round(coef.table[5, 1], 3)` , *SE*= `r round(coef.table[5, 2], 3)` , *z*= `r round(coef.table[5, 3], 3)`, *p*= `r round(coef.table[5,  4], 3)`). Therefore, there is also no interactive effect between age and treatment. These findings are can also be seen in @fig-report *b)*, where there is no noticeable slope for age and no significant change in slope for the two treatment groups.
+
 # Store Session Information
+
+```{r}
+#| label: session-information
+#| echo: false
+#| output: false
+
+version <- sessionInfo() 
+```
